@@ -21,6 +21,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Comparator;
@@ -133,8 +135,13 @@ public class AuctionsServiceImpl implements AuctionsService {
     private UserOutputDTO getUserFromToken(final String userToken) {
         UserInputDTO userInputDTO = new UserInputDTO(userToken);
         var eurekaInstance = eurekaClient.getNextServerFromEureka("USERS", false);
-        var retrievedUser = restTemplate.postForObject(eurekaInstance.getHomePageUrl()+userApiUrl, userInputDTO, UserOutputDTO.class);
-        return retrievedUser;
+        try {
+            var retrievedUser = restTemplate.postForObject(eurekaInstance.getHomePageUrl() + userApiUrl, userInputDTO, UserOutputDTO.class);
+            return retrievedUser;
+        } catch (HttpServerErrorException |
+                 HttpClientErrorException exception) {
+            return null;
+        }
     }
 
     private ProductOutputDTO getProductFromId(final Long productId, final String userToken) {
@@ -142,9 +149,14 @@ public class AuctionsServiceImpl implements AuctionsService {
         HttpHeaders headers = new HttpHeaders();
         headers.set("token", userToken);
         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
-        var productOutputDTO = restTemplate.exchange(
-                eurekaInstance.getHomePageUrl()+getProductApiUrlBase + productId, HttpMethod.GET, requestEntity, ProductOutputDTO.class);
-        return productOutputDTO.getBody();
+        try {
+            var productOutputDTO = restTemplate.exchange(
+                    eurekaInstance.getHomePageUrl() + getProductApiUrlBase + productId, HttpMethod.GET, requestEntity, ProductOutputDTO.class);
+            return productOutputDTO.getBody();
+        } catch (HttpServerErrorException |
+                 HttpClientErrorException exception) {
+            return null;
+        }
     }
 
     private ProductOutputDTO updateProductAuctionStatus(final ProductOutputDTO productOutputDTOFromProductDB, final String userToken) {
@@ -153,7 +165,12 @@ public class AuctionsServiceImpl implements AuctionsService {
         HttpHeaders headers = new HttpHeaders();
         headers.set("token", userToken);
         HttpEntity<ProductOutputDTO> requestEntity = new HttpEntity<>(updatedDTO, headers);
-        var productOutputDTO = restTemplate.exchange(eurekaInstance.getHomePageUrl()+updateProductStatusApiUrl, HttpMethod.POST, requestEntity, ProductOutputDTO.class);
-        return productOutputDTO.getBody();
+        try {
+            var productOutputDTO = restTemplate.exchange(eurekaInstance.getHomePageUrl() + updateProductStatusApiUrl, HttpMethod.POST, requestEntity, ProductOutputDTO.class);
+            return productOutputDTO.getBody();
+        } catch (HttpServerErrorException |
+                 HttpClientErrorException exception) {
+            return null;
+        }
     }
 }
