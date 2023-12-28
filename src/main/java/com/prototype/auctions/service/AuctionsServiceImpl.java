@@ -1,5 +1,6 @@
 package com.prototype.auctions.service;
 
+import com.netflix.discovery.EurekaClient;
 import com.prototype.auctions.dto.BidInputDTO;
 import com.prototype.auctions.dto.BidOutputDTO;
 import com.prototype.auctions.dto.ProductOutputDTO;
@@ -38,15 +39,18 @@ public class AuctionsServiceImpl implements AuctionsService {
     private final BidRepository bidRepository;
     private final BidMapper bidMapper;
     private final RestTemplate restTemplate;
+    private final EurekaClient eurekaClient;
 
     @Autowired
     public AuctionsServiceImpl(BidRepository bidRepository,
                                BidMapper bidMapper,
-                               RestTemplate restTemplate) {
+                               RestTemplate restTemplate,
+                               EurekaClient eurekaClient) {
 
         this.bidRepository = bidRepository;
         this.bidMapper = bidMapper;
         this.restTemplate = restTemplate;
+        this.eurekaClient = eurekaClient;
     }
 
 
@@ -128,26 +132,28 @@ public class AuctionsServiceImpl implements AuctionsService {
 
     private UserOutputDTO getUserFromToken(final String userToken) {
         UserInputDTO userInputDTO = new UserInputDTO(userToken);
-        var retrievedUser = restTemplate.postForObject(userApiUrl, userInputDTO, UserOutputDTO.class);
+        var eurekaInstance = eurekaClient.getNextServerFromEureka("USERS", false);
+        var retrievedUser = restTemplate.postForObject(eurekaInstance.getHomePageUrl()+userApiUrl, userInputDTO, UserOutputDTO.class);
         return retrievedUser;
     }
 
     private ProductOutputDTO getProductFromId(final Long productId, final String userToken) {
+        var eurekaInstance = eurekaClient.getNextServerFromEureka("PRODUCTS", false);
         HttpHeaders headers = new HttpHeaders();
         headers.set("token", userToken);
         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
-
         var productOutputDTO = restTemplate.exchange(
-                getProductApiUrlBase + productId, HttpMethod.GET, requestEntity, ProductOutputDTO.class);
+                eurekaInstance.getHomePageUrl()+getProductApiUrlBase + productId, HttpMethod.GET, requestEntity, ProductOutputDTO.class);
         return productOutputDTO.getBody();
     }
 
     private ProductOutputDTO updateProductAuctionStatus(final ProductOutputDTO productOutputDTOFromProductDB, final String userToken) {
+        var eurekaInstance = eurekaClient.getNextServerFromEureka("PRODUCTS", false);
         ProductOutputDTO updatedDTO = productOutputDTOFromProductDB.withUpdatedInAuctionStatus(false);
         HttpHeaders headers = new HttpHeaders();
         headers.set("token", userToken);
         HttpEntity<ProductOutputDTO> requestEntity = new HttpEntity<>(updatedDTO, headers);
-        var productOutputDTO = restTemplate.exchange(updateProductStatusApiUrl, HttpMethod.POST, requestEntity, ProductOutputDTO.class);
+        var productOutputDTO = restTemplate.exchange(eurekaInstance.getHomePageUrl()+updateProductStatusApiUrl, HttpMethod.POST, requestEntity, ProductOutputDTO.class);
         return productOutputDTO.getBody();
     }
 }
