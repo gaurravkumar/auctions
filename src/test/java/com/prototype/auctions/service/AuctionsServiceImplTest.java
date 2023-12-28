@@ -26,6 +26,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
@@ -194,6 +195,14 @@ class AuctionsServiceImplTest {
         when(restTemplateMock.postForObject(eq(eurekaClient.getNextServerFromEureka("USERS", false).getHomePageUrl() + "null"), eq(userInputDTO), eq(UserOutputDTO.class))).thenReturn(null);
         assertThrows(WinnerException.class, () -> auctionsService.stopAuction(winnerInputDTO, userToken), "Unable to validate User");
     }
+
+    @Test
+    void stopAuctionNullOrMissingToken() {
+        UserInputDTO inputDTO = new UserInputDTO(null);
+        when(restTemplateMock.postForObject(eq(eurekaClient.getNextServerFromEureka("USERS", false).getHomePageUrl() + "null"), eq(inputDTO), eq(UserOutputDTO.class))).thenThrow(HttpClientErrorException.class);
+        assertThrows(WinnerException.class, () -> auctionsService.stopAuction(winnerInputDTO, null), "Unable to validate User");
+    }
+
 
     @Test
     void stopAuctionWhenInvalidProduct() {
