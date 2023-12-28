@@ -47,6 +47,7 @@ Again, the header has to be present with token like _token:f621f84b-d3f1-4dab-bc
 - Stop the Auction
 - The result will be the product price and name of the winner
 
-## More on Eureka Server Project folder
+## More Information
+[READ ME FOR DETAILS](https://github.com/gaurravkumar/staticArtifacts/blob/main/BID%20SYSTEM.docx)
 
 
